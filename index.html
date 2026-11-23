@@ -1,149 +1,133 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <title>Fulton County – 3D City</title>
-  <style>
-    html, body { margin: 0; height: 100%; overflow: hidden; background: #bfd8ef; font-family: sans-serif; }
-    #status { position: fixed; top: 10px; left: 10px; padding: 6px 10px; background: rgba(0,0,0,.6);
-              color: #fff; border-radius: 4px; font-size: 13px; }
-  </style>
-  <script type="importmap">
-  {
-    "imports": {
-      "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js",
-      "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"
-    }
-  }
-  </script>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Skyline — guess the city</title>
+<meta name="description" content="A daily geography game: guess the city from its 3D skyline." />
+<script type="importmap">
+{ "imports": {
+  "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"
+} }
+</script>
+<style>
+  :root { --ink:#1d2433; --muted:#6b7385; --line:#e3e6ec; --bg:#f6f7f9; --accent:#2f6fde; --good:#2e9e5b; }
+  * { box-sizing: border-box; }
+  html, body { margin:0; background:var(--bg); color:var(--ink);
+               font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  /* one centered column, like a phone screen */
+  main { max-width:480px; margin:0 auto; padding:16px 16px 40px; }
+  header { display:flex; align-items:center; gap:8px; margin:8px 0 18px; }
+  header h1 { margin:0; flex:1; text-align:center; font-size:30px; letter-spacing:.2em; font-weight:800; padding-left:80px; }
+  header #number { display:none; }
+  header button { border:1px solid var(--line); background:#fff; border-radius:8px; width:36px; height:36px; font-size:17px; cursor:pointer; }
+
+  /* yellow box in the sketch: the guess box */
+  #entry { position:relative; margin-bottom:14px; }
+  #guess { width:100%; font-size:16px; padding:13px 14px; border:2px solid var(--ink); border-radius:10px; outline:none; background:#fff; }
+  #guess:focus { border-color:var(--accent); }
+  #suggest { position:absolute; left:0; right:0; top:100%; margin:6px 0 0; padding:4px; list-style:none; background:#fff;
+             border:1px solid var(--line); border-radius:10px; box-shadow:0 8px 24px rgba(0,0,0,.15); max-height:260px; overflow:auto; z-index:5; }
+  #suggest li { padding:8px 10px; border-radius:6px; cursor:pointer; font-size:15px; }
+  #suggest li span { color:var(--muted); font-size:13px; margin-left:4px; }
+  #suggest li.active, #suggest li:hover { background:#eef3fd; }
+
+  /* red box in the sketch: the interactive map */
+  #view { position:relative; width:100%; aspect-ratio: 4 / 3.4; border-radius:12px; overflow:hidden;
+          border:1px solid var(--line); box-shadow:0 2px 10px rgba(0,0,0,.06); touch-action:none; background:#cfe0f1; }
+  #view canvas { display:block; width:100%; height:100%; }
+  #clue { position:absolute; left:10px; top:10px; background:rgba(29,36,51,.82); color:#fff; padding:4px 10px; border-radius:20px; font-size:12.5px; font-weight:600; }
+  #credit { position:absolute; right:6px; bottom:5px; font-size:10px; background:rgba(255,255,255,.75); padding:2px 5px; border-radius:4px; }
+  #credit a { color:inherit; }
+  #loading { position:absolute; inset:0; display:grid; place-items:center; color:var(--muted); font-weight:600; }
+
+  /* below the map: hints + previous guesses */
+  #hints { display:flex; gap:8px; flex-wrap:wrap; margin:12px 0 0; }
+  #hints span { background:#eef3fd; color:#24427a; padding:4px 10px; border-radius:14px; font-size:13px; font-weight:600; }
+  #guesses { list-style:none; margin:12px 0 0; padding:0; display:grid; gap:5px; }
+  #guesses li { display:flex; align-items:center; gap:8px; min-height:34px; padding:0 10px; border-radius:8px; border:1px solid var(--line); background:#fff; font-size:14px; }
+  #guesses li.empty { display:none; }
+  #guesses li.right { border-color:var(--good); background:#eaf7ef; }
+  #guesses .meta { color:var(--muted); font-size:12px; }
+  #guesses .dist { margin-left:auto; font-variant-numeric:tabular-nums; font-size:13px; white-space:nowrap; }
+
+  dialog { border:none; border-radius:14px; padding:22px; max-width:420px; width:calc(100% - 32px); box-shadow:0 20px 60px rgba(0,0,0,.25); }
+  dialog::backdrop { background:rgba(20,25,35,.45); }
+  dialog h2 { margin:0 0 6px; font-size:20px; }
+  dialog .close { position:absolute; right:12px; top:10px; border:none; background:none; font-size:22px; cursor:pointer; color:var(--muted); }
+  dialog p, dialog li { line-height:1.45; font-size:14.5px; }
+  .legend { display:grid; grid-template-columns:auto 1fr; gap:4px 8px; font-size:14px; margin:8px 0; }
+  #result-city { font-size:22px; font-weight:800; margin:2px 0 14px; }
+  .stats { display:grid; grid-template-columns:repeat(4,1fr); text-align:center; margin:6px 0 14px; }
+  .stats b { display:block; font-size:24px; }
+  .stats small { color:var(--muted); font-size:11px; }
+  #dist .row { display:flex; align-items:center; gap:6px; margin:3px 0; font-size:13px; }
+  #dist .bar { background:#c9ced8; color:#fff; text-align:right; padding:1px 6px; border-radius:3px; font-weight:700; font-size:12px; min-width:18px; }
+  #dist .bar.mine { background:var(--good); }
+  #result-actions { display:flex; align-items:center; gap:12px; margin-top:16px; }
+  #result-actions .next { flex:1; font-size:13px; color:var(--muted); }
+  #result-actions .next b { display:block; font-size:20px; color:var(--ink); font-variant-numeric:tabular-nums; }
+  #share { background:var(--good); color:#fff; border:none; border-radius:10px; padding:12px 22px; font-size:16px; font-weight:700; cursor:pointer; }
+  #toast { position:fixed; left:50%; bottom:28px; transform:translate(-50%,10px); background:var(--ink); color:#fff; padding:9px 16px;
+           border-radius:8px; font-size:14px; opacity:0; transition:.2s; pointer-events:none; z-index:20; }
+  #toast.show { opacity:1; transform:translate(-50%,0); }
+</style>
 </head>
 <body>
-<div id="status">Loading…</div>
-<script type="module">
-import * as THREE from 'three';
-import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
-import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
-import { CSS2DRenderer, CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js';
+<main>
+  <header>
+    <h1>SKYLINE</h1><span id="number"></span>
+    <button id="btn-help" title="How to play">?</button>
+    <button id="btn-stats" title="Statistics">📊</button>
+  </header>
 
-// ▼▼ Put the names of your converted .glb files here ▼▼
-// open  localhost:8000/?glb=cleveland.glb  to view any single file
-const fromUrl = new URLSearchParams(location.search).get('glb');
-const TILES = fromUrl ? [fromUrl] : [
-  'Georgia-13121-000.glb', 'Georgia-13121-001.glb',
-  'Georgia-13121-002.glb', 'Georgia-13121-003.glb',
-  'Georgia-13121-004.glb', 'Georgia-13121-005.glb',
-  'Georgia-13121-006.glb', 'Georgia-13121-007.glb',
-];
+  <div id="entry">
+    <input id="guess" placeholder="Guess the city…" autocomplete="off" autocapitalize="words" spellcheck="false" enterkeyhint="go" />
+    <ul id="suggest" hidden></ul>
+  </div>
 
-const status = document.getElementById('status');
+  <div id="view">
+    <div id="loading">Loading today's skyline…</div>
+    <div id="clue">Clue 1 of 6</div>
+    <div id="credit">Building data © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap contributors</a></div>
+  </div>
 
-// --- renderer / scene / camera ---
-const renderer = new THREE.WebGLRenderer({ antialias: true, logarithmicDepthBuffer: true });
-renderer.setPixelRatio(devicePixelRatio);
-renderer.setSize(innerWidth, innerHeight);
-document.body.appendChild(renderer.domElement);
+  <div id="hints"></div>
+  <ul id="guesses"></ul>
+</main>
 
-const scene = new THREE.Scene();
-scene.background = new THREE.Color(0xbfd8ef);
-scene.fog = new THREE.Fog(0xbfd8ef, 4000, 20000);
+<dialog id="help">
+  <button class="close" aria-label="Close">×</button>
+  <h2>How to play</h2>
+  <p>Guess the city from its 3D skyline in <b>6 tries</b>.</p>
+  <p><b>Move:</b> W A S D or arrow keys (hold Shift to go faster). <b>Look:</b> drag. <b>Zoom:</b> scroll or pinch. Click the map first so the keys don't type in the guess box.</p>
+  <p>Every wrong guess shows you more: the camera pulls back, circles the city, then rises above it. Later clues reveal the continent and country.</p>
+  <div class="legend">
+    <span>🟨</span><span>within 500 km</span>
+    <span>🟧</span><span>within 2,000 km</span>
+    <span>🟥</span><span>farther away</span>
+  </div>
+  <p>The arrow points from your guess toward the answer. A new skyline every day at midnight.</p>
+</dialog>
 
-const camera = new THREE.PerspectiveCamera(60, innerWidth / innerHeight, 1, 100000);
-camera.position.set(800, 600, 800);
+<dialog id="result">
+  <button class="close" aria-label="Close">×</button>
+  <h2 id="result-title">Statistics</h2>
+  <div id="result-city"></div>
+  <div class="stats">
+    <div><b id="st-played">0</b><small>Played</small></div>
+    <div><b id="st-win">0</b><small>Win %</small></div>
+    <div><b id="st-streak">0</b><small>Streak</small></div>
+    <div><b id="st-max">0</b><small>Best streak</small></div>
+  </div>
+  <div id="dist"></div>
+  <div id="result-actions" hidden>
+    <div class="next">Next skyline in<b id="countdown">–</b></div>
+    <button id="share">Share</button>
+  </div>
+</dialog>
 
-const controls = new OrbitControls(camera, renderer.domElement);
-controls.enableDamping = true;
-controls.maxPolarAngle = Math.PI / 2 - 0.02; // don't go under the ground
-
-// --- lights ---
-scene.add(new THREE.HemisphereLight(0xffffff, 0x556677, 1.3));
-const sun = new THREE.DirectionalLight(0xffffff, 1.6);
-sun.position.set(1, 2, 0.6);
-scene.add(sun);
-
-// --- ground (buildings sit at y = 0) ---
-const ground = new THREE.Mesh(
-  new THREE.PlaneGeometry(200000, 200000),
-  new THREE.MeshStandardMaterial({ color: 0x7a8a6a })
-);
-ground.rotation.x = -Math.PI / 2;
-scene.add(ground);
-
-// --- buildings ---
-const buildingMat = new THREE.MeshStandardMaterial({ color: 0xdedad2, flatShading: true, side: THREE.DoubleSide });
-const cityBounds = new THREE.Box3();
-const loader = new GLTFLoader();
-let loaded = 0;
-
-function frameCity() {
-  const center = cityBounds.getCenter(new THREE.Vector3());
-  const size = cityBounds.getSize(new THREE.Vector3());
-  const radius = Math.max(size.x, size.z) * 0.6 + 200;
-  controls.target.set(center.x, 0, center.z);
-  camera.position.set(center.x + radius * 0.6, radius * 0.6, center.z + radius * 0.6);
-  scene.fog.near = radius * 2;   // fog scales with the city so it never hides it
-  scene.fog.far = radius * 6;
-  camera.far = radius * 10;
-  camera.updateProjectionMatrix();
-  controls.maxDistance = radius * 3;
-  controls.update();
-  console.log('city size (m):', size.x.toFixed(0), 'x', size.z.toFixed(0), 'tallest:', size.y.toFixed(0));
-}
-
-for (const url of TILES) {
-  loader.load(
-    url,
-    (gltf) => {
-      gltf.scene.traverse((o) => { if (o.isMesh) o.material = buildingMat; });
-      scene.add(gltf.scene);
-      cityBounds.expandByObject(gltf.scene);
-      loaded++;
-      status.textContent = `Loaded ${loaded}/${TILES.length} tiles`;
-      if (loaded === 1) frameCity();          // jump to the first tile right away
-      if (loaded === TILES.length) { frameCity(); setTimeout(() => status.remove(), 2000); }
-    },
-    undefined,
-    (err) => { console.warn('missing tile (fine if not converted yet):', url, err); }
-  );
-}
-
-// --- name tags (curation helper): loads <name>_labels.json made by osm_skyline.py; press L to toggle ---
-const labelRenderer = new CSS2DRenderer();
-labelRenderer.setSize(innerWidth, innerHeight);
-Object.assign(labelRenderer.domElement.style, { position: 'fixed', top: '0', left: '0', pointerEvents: 'none' });
-document.body.appendChild(labelRenderer.domElement);
-const labelGroup = new THREE.Group();
-scene.add(labelGroup);
-if (fromUrl) {
-  fetch(fromUrl.replace(/\.glb$/, '_labels.json'))
-    .then((r) => (r.ok ? r.json() : []))
-    .then((labels) => {
-      for (const L of labels) {
-        const div = document.createElement('div');
-        div.innerHTML = `<b>${L.text}</b><br><span style="opacity:.75">${L.latlon}</span>`;
-        Object.assign(div.style, { background: 'rgba(0,0,0,.7)', color: '#fff', padding: '2px 6px',
-          borderRadius: '4px', font: '12px sans-serif', whiteSpace: 'nowrap', textAlign: 'center' });
-        const tag = new CSS2DObject(div);
-        tag.position.set(L.x, L.y + 8, L.z);
-        tag.center.set(0.5, 1);
-        labelGroup.add(tag);
-      }
-    })
-    .catch(() => {});
-}
-addEventListener('keydown', (e) => { if (e.key === 'l' || e.key === 'L') labelGroup.visible = !labelGroup.visible; });
-
-addEventListener('resize', () => {
-  camera.aspect = innerWidth / innerHeight;
-  camera.updateProjectionMatrix();
-  renderer.setSize(innerWidth, innerHeight);
-  labelRenderer.setSize(innerWidth, innerHeight);
-});
-
-renderer.setAnimationLoop(() => {
-  controls.update();
-  renderer.render(scene, camera);
-  labelRenderer.render(scene, camera);
-});
-</script>
+<script type="module" src="skyline.js"></script>
 </body>
 </html>

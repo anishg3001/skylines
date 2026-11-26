@@ -1,0 +1,42 @@
+[
+ {
+  "note": "Wells Fargo Center",
+  "lat": 45.514356,
+  "lon": -122.679359,
+  "custom": {
+   "tiers": [
+    {
+     "w": "100%",
+     "d": "100%",
+     "top": 166
+    }
+   ],
+   "fins": {
+    "spacing": 3.2,
+    "depth": 1.6,
+    "width": 1.3
+   }
+  }
+ },
+ {
+  "note": "KOIN Center roof",
+  "lat": 45.51317,
+  "lon": -122.67761,
+  "custom": {
+   "keep": true,
+   "merge": 25,
+   "on_top": true,
+   "tiers": [
+    {
+     "w": "100%",
+     "d": "100%",
+     "notch": "30%",
+     "base": "top",
+     "top": "+0.5"
+    }
+   ],
+   "crown_height": 18,
+   "spire_height": 5
+  }
+ }
+]

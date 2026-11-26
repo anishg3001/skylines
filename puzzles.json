@@ -1,11 +1,54 @@
 {
   "start": "2026-11-23",
   "puzzles": [
-    { "glb": "atlanta.glb",      "answer": "Atlanta",       "country": "United States", "continent": "North America", "heading": 80 },
-    { "glb": "cleveland.glb",    "answer": "Cleveland",     "country": "United States", "continent": "North America", "heading": 320 },
-    { "glb": "nyc_downtown.glb", "answer": "New York City", "country": "United States", "continent": "North America", "heading": 120 },
-    { "glb": "houston.glb",      "answer": "Houston",       "country": "United States", "continent": "North America", "heading": 270 },
-    { "glb": "seattle.glb",      "answer": "Seattle",       "country": "United States", "continent": "North America", "heading": 315 },
-    { "glb": "portland.glb",     "answer": "Portland",      "country": "United States", "continent": "North America", "heading": 90 }
+    {
+      "glb": "atlanta.glb",
+      "answer": "Atlanta",
+      "country": "United States",
+      "continent": "North America",
+      "heading": 80
+    },
+    {
+      "glb": "cleveland.glb",
+      "answer": "Cleveland",
+      "country": "United States",
+      "continent": "North America",
+      "heading": 320
+    },
+    {
+      "glb": "nyc_downtown.glb",
+      "answer": "New York City",
+      "country": "United States",
+      "continent": "North America",
+      "heading": 120
+    },
+    {
+      "glb": "houston.glb",
+      "answer": "Houston",
+      "country": "United States",
+      "continent": "North America",
+      "heading": 270
+    },
+    {
+      "glb": "seattle.glb",
+      "answer": "Seattle",
+      "country": "United States",
+      "continent": "North America",
+      "heading": 315
+    },
+    {
+      "glb": "portland.glb",
+      "answer": "Portland",
+      "country": "United States",
+      "continent": "North America",
+      "heading": 90
+    },
+    {
+      "glb": "sanfrancisco.glb",
+      "answer": "San Francisco",
+      "country": "United States",
+      "continent": "North America",
+      "heading": 80
+    }
   ]
 }
